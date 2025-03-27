@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lights Out Game</title>
+    <title>IllumeAI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #222;
-            color: white;
+            transition: background 0.3s, color 0.3s;
         }
+
         #container {
             display: flex;
             flex-direction: column;
@@ -18,6 +18,7 @@
             justify-content: center;
             height: 100vh;
         }
+
         #grid-container {
             display: grid;
             gap: 5px;
@@ -26,11 +27,12 @@
             margin: 20px auto;
             width: fit-content;
         }
+
         .cell {
             width: 60px;
             height: 60px;
             border-radius: 10px;
-            border: 2px solid white;
+            border: 2px solid;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -38,9 +40,29 @@
             font-size: 14px;
             font-weight: bold;
         }
-        .on { background-color: rgb(130, 180, 199); color: black; }
-        .off { background-color: black; color: white; }
+
+        /* Dark mode styles (default) */
+        body.dark-mode {
+            background-color: #222;
+            color: white;
+        }
+
+        body.dark-mode .cell { border-color: white; }
+        body.dark-mode .on { background-color: rgb(130, 180, 199); color: black; }
+        body.dark-mode .off { background-color: black; color: white; }
+
+        /* Light mode styles */
+        body.light-mode {
+            background-color: white;
+            color: black;
+        }
+
+        body.light-mode .cell { border-color: black; }
+        body.light-mode .on { background-color: yellow; color: black; }
+        body.light-mode .off { background-color: white; color: black; }
+
         .buttons { margin-top: 20px; }
+
         .btn {
             background-color: #444;
             color: white;
@@ -51,26 +73,83 @@
             cursor: pointer;
             border-radius: 5px;
         }
+
         .btn:hover { background-color: #666; }
+
+        /* Disabled button style */
+        .btn:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+        }
+
+        /* Toggle Button */
+        .toggle-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: 2px solid;
+            padding: 8px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        body.dark-mode .toggle-btn {
+            border-color: white;
+            color: white;
+        }
+
+        body.light-mode .toggle-btn {
+            border-color: black;
+            color: black;
+        }
+
         #solution-steps { margin-top: 10px; font-size: 16px; }
     </style>
 </head>
-<body>
+<body class="dark-mode"> 
+
+<button class="toggle-btn" onclick="toggleTheme()">Toggle Mode</button>
 
 <div id="container">
-    <h1>Lights Out Game</h1>
+    <h1>IllumeAI</h1>
     <p id="level-indicator">Level: 1</p>
     <div id="grid-container"></div>
     <div class="buttons">
         <button class="btn" onclick="resetLevel()">Reset Level</button>
         <button class="btn" onclick="resetGame()">Reset Game</button>
         <button class="btn" onclick="solveGame()">Show Solution Using AI</button>
-        <button class="btn" onclick="nextLevel()">Next Level</button>
+        <button id="next-level-btn" class="btn" onclick="nextLevel()" disabled>Next Level</button>
     </div>
     <p id="solution-steps"></p>
 </div>
 
 <script>
+    // Function to toggle between light and dark mode
+    function toggleTheme() {
+        const body = document.body;
+        if (body.classList.contains("dark-mode")) {
+            body.classList.remove("dark-mode");
+            body.classList.add("light-mode");
+            localStorage.setItem("theme", "light-mode");
+        } else {
+            body.classList.remove("light-mode");
+            body.classList.add("dark-mode");
+            localStorage.setItem("theme", "dark-mode");
+        }
+    }
+
+    // Load stored theme preference
+    window.onload = function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme) {
+            document.body.classList.remove("dark-mode", "light-mode");
+            document.body.classList.add(savedTheme);
+        }
+        fetchGrid();
+    };
+
     async function fetchGrid() {
         let response = await fetch("/get_grid");
         let data = await response.json();
@@ -80,23 +159,31 @@
     function renderGrid(grid, level) {
         const gridContainer = document.getElementById("grid-container");
         gridContainer.innerHTML = "";  
-        
-        // Ensure the grid-container gets the right grid styling
+
         gridContainer.style.display = "grid";
         gridContainer.style.gridTemplateColumns = `repeat(${grid.length}, 60px)`;
         gridContainer.style.gridTemplateRows = `repeat(${grid.length}, 60px)`;
+
+        let isComplete = true; // Track if the level is solved
 
         grid.forEach((row, rIndex) => {
             row.forEach((cell, cIndex) => {
                 const cellElement = document.createElement("div");
                 cellElement.className = `cell ${cell ? "on" : "off"}`;
                 cellElement.onclick = () => toggleLight(rIndex, cIndex);
-                cellElement.innerText = `${rIndex},${cIndex}`; // Display coordinates
+                cellElement.innerText = `${rIndex},${cIndex}`;  // Show (row, col)
                 gridContainer.appendChild(cellElement);
+
+                if (cell === 1) {
+                    isComplete = false; // If any cell is ON, level isn't solved
+                }
             });
         });
 
         document.getElementById("level-indicator").innerText = `Level: ${level}`;
+        
+        // Enable/Disable "Next Level" button
+        document.getElementById("next-level-btn").disabled = !isComplete;
     }
 
     async function toggleLight(row, col) {
@@ -126,6 +213,9 @@
     }
 
     async function nextLevel() { 
+        let btn = document.getElementById("next-level-btn");
+        if (btn.disabled) return;  // Prevent skipping levels
+
         let response = await fetch("/next_level"); 
         let data = await response.json();
         fetchGrid();
@@ -134,7 +224,6 @@
         }
     }
 
-    fetchGrid();
 </script>
 
 </body>
