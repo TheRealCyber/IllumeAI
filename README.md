@@ -23,7 +23,7 @@ Built with **Flask (Python) for the backend** and **JavaScript for the frontend*
 
 ### Clone the Repository  
 ```bash
-git clone https://github.com/YOUR-USERNAME/IllumeAI.git
+git clone https://github.com/TheRealCyber/IllumeAI.git
 cd IllumeAI
 ```
 
