@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lights Out Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #222;
+            color: white;
+        }
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #grid-container {
+            display: grid;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            margin: 20px auto;
+            width: fit-content;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .on { background-color: rgb(130, 180, 199); color: black; }
+        .off { background-color: black; color: white; }
+        .buttons { margin-top: 20px; }
+        .btn {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .btn:hover { background-color: #666; }
+        #solution-steps { margin-top: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <h1>Lights Out Game</h1>
+    <p id="level-indicator">Level: 1</p>
+    <div id="grid-container"></div>
+    <div class="buttons">
+        <button class="btn" onclick="resetLevel()">Reset Level</button>
+        <button class="btn" onclick="resetGame()">Reset Game</button>
+        <button class="btn" onclick="solveGame()">Show Solution Using AI</button>
+        <button class="btn" onclick="nextLevel()">Next Level</button>
+    </div>
+    <p id="solution-steps"></p>
+</div>
+
+<script>
+    async function fetchGrid() {
+        let response = await fetch("/get_grid");
+        let data = await response.json();
+        renderGrid(data.grid, data.level);
+    }
+
+    function renderGrid(grid, level) {
+        const gridContainer = document.getElementById("grid-container");
+        gridContainer.innerHTML = "";  
+        
+        // Ensure the grid-container gets the right grid styling
+        gridContainer.style.display = "grid";
+        gridContainer.style.gridTemplateColumns = `repeat(${grid.length}, 60px)`;
+        gridContainer.style.gridTemplateRows = `repeat(${grid.length}, 60px)`;
+
+        grid.forEach((row, rIndex) => {
+            row.forEach((cell, cIndex) => {
+                const cellElement = document.createElement("div");
+                cellElement.className = `cell ${cell ? "on" : "off"}`;
+                cellElement.onclick = () => toggleLight(rIndex, cIndex);
+                cellElement.innerText = `${rIndex},${cIndex}`; // Display coordinates
+                gridContainer.appendChild(cellElement);
+            });
+        });
+
+        document.getElementById("level-indicator").innerText = `Level: ${level}`;
+    }
+
+    async function toggleLight(row, col) {
+        let response = await fetch(`/toggle/${row}/${col}`);
+        let data = await response.json();
+        renderGrid(data.grid, data.level);
+    }
+
+    async function solveGame() {
+        let response = await fetch("/solve");
+        let data = await response.json();
+        document.getElementById("solution-steps").innerText = `Steps: ${data.steps.map(s => `[${s[0]}, ${s[1]}]`).join(" -> ")}`;
+    }
+
+    async function resetLevel() { 
+        await fetch("/reset_level"); 
+        fetchGrid();
+    }
+
+    async function resetGame() { 
+        let response = await fetch("/reset_game"); 
+        let data = await response.json();
+        fetchGrid();
+        if (data.solution_cleared) {
+            document.getElementById("solution-steps").innerText = "";
+        }
+    }
+
+    async function nextLevel() { 
+        let response = await fetch("/next_level"); 
+        let data = await response.json();
+        fetchGrid();
+        if (data.solution_cleared) {
+            document.getElementById("solution-steps").innerText = "";
+        }
+    }
+
+    fetchGrid();
+</script>
+
+</body>
+</html>
