@@ -3,6 +3,8 @@ import random
 import time
 import threading
 import numpy as np
+import webbrowser
+import threading
 
 app = Flask(__name__)
 
@@ -131,5 +133,12 @@ def solve():
 
     return jsonify({"steps": solution_steps})
 
+def open_browser():
+    """Wait briefly and then open the default web browser to the app URL."""
+    import time
+    time.sleep(1)  # Give Flask a second to start
+    webbrowser.open("http://127.0.0.1:5000")
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    threading.Thread(target=open_browser, daemon=True).start()
+    app.run(debug=False)  # No auto-reload, no double browser
